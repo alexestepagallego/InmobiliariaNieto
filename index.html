@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inmobiliaria Nieto · Inmuebles en Córdoba</title>
+<meta name="description" content="Cartera cuidada de viviendas en venta y alquiler en Córdoba, del casco histórico a El Brillante.">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --paper:#FBF9F4; --paper-2:#F3EEE4; --surface:#FFFFFF;
+    --ink:#1C2620; --muted:#6E7B72; --line:#E7E1D6; --line-2:#D8D0C1;
+    --pine:#1B6E52; --pine-d:#0F4A37; --pine-soft:#EAF3EE;
+    --clay:#B06A2C; --clay-d:#8F531E;
+    --shadow:0 1px 2px rgba(28,38,32,.04), 0 18px 40px -26px rgba(28,38,32,.35);
+    --shadow-lg:0 30px 70px -30px rgba(28,38,32,.45);
+    --r:14px;
+    --serif:ui-serif,"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --paper:#11150F; --paper-2:#171D15; --surface:#191F17;
+      --ink:#ECEAE0; --muted:#9AA79C; --line:#2A3227; --line-2:#39422F;
+      --pine:#5FC79A; --pine-d:#4FB98C; --pine-soft:#17251D;
+      --clay:#D89A5A; --clay-d:#E0A968;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 18px 40px -26px rgba(0,0,0,.7);
+      --shadow-lg:0 30px 70px -30px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="light"]{
+    --paper:#FBF9F4; --paper-2:#F3EEE4; --surface:#FFFFFF;
+    --ink:#1C2620; --muted:#6E7B72; --line:#E7E1D6; --line-2:#D8D0C1;
+    --pine:#1B6E52; --pine-d:#0F4A37; --pine-soft:#EAF3EE;
+    --clay:#B06A2C; --clay-d:#8F531E;
+    --shadow:0 1px 2px rgba(28,38,32,.04), 0 18px 40px -26px rgba(28,38,32,.35);
+    --shadow-lg:0 30px 70px -30px rgba(28,38,32,.45);
+  }
+  :root[data-theme="dark"]{
+    --paper:#11150F; --paper-2:#171D15; --surface:#191F17;
+    --ink:#ECEAE0; --muted:#9AA79C; --line:#2A3227; --line-2:#39422F;
+    --pine:#5FC79A; --pine-d:#4FB98C; --pine-soft:#17251D;
+    --clay:#D89A5A; --clay-d:#E0A968;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 18px 40px -26px rgba(0,0,0,.7);
+    --shadow-lg:0 30px 70px -30px rgba(0,0,0,.8);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); font-size:16px; line-height:1.55;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;}
+  a{color:inherit}
+  img{max-width:100%}
+
+  .wrap{max-width:1160px; margin:0 auto; padding:0 24px}
+
+  /* Header */
+  header{position:sticky; top:0; z-index:20; backdrop-filter:saturate(1.2) blur(10px);
+    background:color-mix(in srgb, var(--paper) 86%, transparent);
+    border-bottom:1px solid var(--line);}
+  .hrow{display:flex; align-items:center; gap:18px; height:66px}
+  .logo{display:flex; align-items:baseline; gap:9px; font-family:var(--serif); font-size:21px; letter-spacing:.2px}
+  .logo b{font-weight:600}
+  .logo .est{font-size:11px; font-family:var(--sans); letter-spacing:.22em; text-transform:uppercase; color:var(--muted)}
+  .hspace{flex:1}
+  .hnav{display:flex; gap:26px; font-size:14.5px; color:var(--muted)}
+  .hnav a{text-decoration:none; transition:color .15s}
+  .hnav a:hover{color:var(--ink)}
+  .tbtn{width:38px; height:38px; border-radius:10px; border:1px solid var(--line-2); background:transparent;
+    color:var(--ink); cursor:pointer; display:grid; place-items:center; font-size:16px}
+  .tbtn:hover{background:var(--paper-2)}
+
+  /* Hero */
+  .hero{padding:64px 0 30px; position:relative; overflow:hidden}
+  .hero .eyebrow{font-family:var(--mono); font-size:12.5px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--pine); display:flex; align-items:center; gap:10px; margin-bottom:20px}
+  .hero .eyebrow::before{content:""; width:30px; height:1px; background:var(--pine)}
+  .hero h1{font-family:var(--serif); font-weight:600; font-size:clamp(38px,6vw,68px); line-height:1.02;
+    letter-spacing:-.5px; margin:0 0 20px; max-width:15ch; text-wrap:balance}
+  .hero h1 em{font-style:italic; color:var(--pine)}
+  .hero p{font-size:18px; color:var(--muted); max-width:52ch; margin:0 0 30px}
+  .archline{position:absolute; right:-40px; top:20px; width:min(46%,520px); opacity:.5; pointer-events:none; color:var(--clay)}
+  @media (prefers-color-scheme:dark){ .archline{opacity:.28} }
+  :root[data-theme="dark"] .archline{opacity:.28}
+  :root[data-theme="light"] .archline{opacity:.5}
+
+  /* Controles / filtros */
+  .controls{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:8px 0 30px}
+  .chips{display:flex; gap:8px; background:var(--paper-2); padding:5px; border-radius:999px; border:1px solid var(--line)}
+  .chip{border:none; background:transparent; font-family:var(--sans); font-size:14px; font-weight:500;
+    color:var(--muted); padding:8px 16px; border-radius:999px; cursor:pointer; transition:.15s}
+  .chip[aria-pressed="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+  .search{flex:1; min-width:200px; display:flex; align-items:center; gap:9px; background:var(--surface);
+    border:1px solid var(--line-2); border-radius:12px; padding:0 14px; height:46px}
+  .search input{flex:1; border:none; background:transparent; font-family:var(--sans); font-size:15px; color:var(--ink); outline:none}
+  .search svg{color:var(--muted); flex-shrink:0}
+  .count{font-family:var(--mono); font-size:13px; color:var(--muted); white-space:nowrap}
+
+  /* Rejilla */
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:30px 26px; padding-bottom:70px}
+  .prop{border:none; background:transparent; text-align:left; padding:0; cursor:pointer; font-family:inherit;
+    display:flex; flex-direction:column; color:inherit}
+  .photo{position:relative; aspect-ratio:5/4; border-radius:130px 130px var(--r) var(--r); overflow:hidden;
+    border:1px solid var(--line); box-shadow:var(--shadow); transition:transform .35s cubic-bezier(.2,.7,.3,1), box-shadow .35s}
+  .prop:hover .photo{transform:translateY(-6px); box-shadow:var(--shadow-lg)}
+  .prop:focus-visible .photo{outline:2px solid var(--pine); outline-offset:3px}
+  .photo .art{position:absolute; inset:0}
+  .photo img, .shot img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block}
+  .badge{position:absolute; bottom:16px; left:16px; z-index:2; font-family:var(--sans); font-size:11.5px; font-weight:600;
+    letter-spacing:.03em; padding:5px 11px; border-radius:999px; backdrop-filter:blur(4px);
+    background:color-mix(in srgb, var(--surface) 82%, transparent); border:1px solid var(--line)}
+  .badge.venta{color:var(--pine-d)} .badge.alquiler{color:var(--clay-d)}
+  :root[data-theme="dark"] .badge.venta{color:var(--pine)}
+  @media (prefers-color-scheme:dark){ .badge.venta{color:var(--pine)} }
+
+  .pbody{padding:16px 4px 0; display:flex; flex-direction:column; gap:8px}
+  .ptop{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
+  .ptitle{font-family:var(--serif); font-size:20px; font-weight:600; line-height:1.2; letter-spacing:-.2px}
+  .pzone{font-size:13.5px; color:var(--muted); margin-top:2px}
+  .pprice{font-family:var(--serif); font-size:20px; font-weight:600; color:var(--clay); white-space:nowrap;
+    font-variant-numeric:tabular-nums}
+  .pprice small{font-family:var(--sans); font-size:12px; color:var(--muted); font-weight:400}
+  .facts{display:flex; gap:16px; font-family:var(--mono); font-size:12.5px; color:var(--muted); margin-top:2px}
+  .facts span{display:flex; align-items:center; gap:5px}
+
+  .empty{grid-column:1/-1; text-align:center; color:var(--muted); padding:60px 0; font-size:15px}
+
+  /* Ficha modal */
+  .ov{position:fixed; inset:0; z-index:60; background:rgba(17,21,15,.55); backdrop-filter:blur(3px);
+    display:none; align-items:flex-start; justify-content:center; padding:5vh 18px; overflow-y:auto}
+  .ov.show{display:flex}
+  .sheet{background:var(--surface); border:1px solid var(--line); border-radius:20px; max-width:760px; width:100%;
+    box-shadow:var(--shadow-lg); overflow:hidden; animation:rise .3s ease both}
+  @keyframes rise{from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none}}
+  .sheet .shot{position:relative; aspect-ratio:16/9}
+  .sheet .close{position:absolute; top:16px; right:16px; z-index:3; width:40px; height:40px; border-radius:50%;
+    border:1px solid var(--line); background:color-mix(in srgb,var(--surface) 85%,transparent); backdrop-filter:blur(6px);
+    cursor:pointer; font-size:18px; color:var(--ink); display:grid; place-items:center}
+  .sheet-b{padding:26px 30px 30px}
+  .sheet-b .sbadge{font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--pine)}
+  .sheet-b h2{font-family:var(--serif); font-weight:600; font-size:30px; line-height:1.1; margin:8px 0 4px; letter-spacing:-.4px}
+  .sheet-b .zone{color:var(--muted); margin-bottom:18px}
+  .sgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:20px 0}
+  .stat{background:var(--paper-2); border:1px solid var(--line); border-radius:12px; padding:13px 14px}
+  .stat .k{font-family:var(--mono); font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted)}
+  .stat .v{font-family:var(--serif); font-size:22px; font-weight:600; margin-top:3px; font-variant-numeric:tabular-nums}
+  .sdesc{color:var(--ink); opacity:.9; margin:6px 0 22px; max-width:60ch}
+  .sprice{font-family:var(--serif); font-size:30px; font-weight:600; color:var(--clay); font-variant-numeric:tabular-nums}
+  .sprice small{font-family:var(--sans); font-size:14px; color:var(--muted); font-weight:400}
+  .cta{display:flex; gap:12px; flex-wrap:wrap; margin-top:22px}
+  .btn{border:none; border-radius:12px; padding:14px 22px; font-family:var(--sans); font-size:15px; font-weight:600;
+    cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:9px; transition:.15s}
+  .btn.p{background:var(--pine); color:#fff} .btn.p:hover{background:var(--pine-d)}
+  :root[data-theme="dark"] .btn.p{color:#0B1410}
+  @media (prefers-color-scheme:dark){ .btn.p{color:#0B1410} }
+  .btn.g{background:transparent; color:var(--ink); border:1px solid var(--line-2)} .btn.g:hover{background:var(--paper-2)}
+
+  /* Footer */
+  footer{border-top:1px solid var(--line); padding:44px 0; margin-top:20px; color:var(--muted); font-size:14px}
+  .frow{display:flex; justify-content:space-between; gap:24px; flex-wrap:wrap; align-items:center}
+  .frow .logo{color:var(--ink)}
+
+  @media (max-width:560px){
+    .hnav{display:none}
+    .sgrid{grid-template-columns:repeat(2,1fr)}
+    .sheet-b{padding:22px}
+    .hero{padding-top:44px}
+  }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hrow">
+    <div class="logo"><b>Nieto</b><span class="est">Inmobiliaria · Córdoba</span></div>
+    <div class="hspace"></div>
+    <nav class="hnav">
+      <a href="#cartera">Cartera</a>
+      <a href="#" data-op="venta">En venta</a>
+      <a href="#" data-op="alquiler">Alquiler</a>
+      <a href="#contacto">Contacto</a>
+    </nav>
+    <button class="tbtn" id="theme" aria-label="Cambiar tema">☾</button>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <svg class="archline" viewBox="0 0 520 300" fill="none" aria-hidden="true">
+      <g stroke="currentColor" stroke-width="2">
+        <path d="M20 290V150c0-30 24-54 54-54s54 24 54 54v140"/>
+        <path d="M148 290V150c0-30 24-54 54-54s54 24 54 54v140"/>
+        <path d="M276 290V150c0-30 24-54 54-54s54 24 54 54v140"/>
+        <path d="M404 290V150c0-30 24-54 54-54s54 24 54 54v140"/>
+        <path d="M8 150h504" opacity=".5"/>
+      </g>
+    </svg>
+    <div class="eyebrow">Inmuebles seleccionados</div>
+    <h1>Casas con <em>alma</em> en el corazón de Córdoba.</h1>
+    <p>Una cartera cuidada de viviendas en venta y alquiler, del casco histórico a El Brillante. Encuentra la tuya.</p>
+  </section>
+
+  <section class="wrap" id="cartera">
+    <div class="controls">
+      <div class="chips" role="group" aria-label="Filtrar por operación">
+        <button class="chip" data-f="todos" aria-pressed="true">Todos</button>
+        <button class="chip" data-f="venta" aria-pressed="false">En venta</button>
+        <button class="chip" data-f="alquiler" aria-pressed="false">Alquiler</button>
+      </div>
+      <label class="search">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="q" type="search" placeholder="Buscar por zona, tipo…" aria-label="Buscar inmuebles">
+      </label>
+      <div class="count" id="count"></div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+
+<footer id="contacto">
+  <div class="wrap frow">
+    <div class="logo"><b>Nieto</b><span class="est">Inmobiliaria</span></div>
+    <div>Av. del Brillante 12, 14012 Córdoba · <a href="tel:+34957000000" style="color:var(--pine);text-decoration:none">957 00 00 00</a> · <a href="mailto:hola@inmonieto.es" style="color:var(--pine);text-decoration:none">hola@inmonieto.es</a></div>
+  </div>
+</footer>
+
+<div class="ov" id="ov" role="dialog" aria-modal="true" aria-label="Detalle del inmueble">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<script>
+  /* ════════════════════════════════════════════════════════════════════
+     CONFIGURACIÓN — pega aquí tus 2 valores de Supabase (los MISMOS del
+     panel). Mientras estén vacíos, la web muestra inmuebles de ejemplo.
+     ════════════════════════════════════════════════════════════════════ */
+  const SUPABASE_URL      = "https://zooypbivscuyyhdukyjm.supabase.co";   // URL base del proyecto (sin /rest/v1/)
+  const SUPABASE_ANON_KEY = "sb_publishable_5FHR8R-8KN8HfDftIhCabg_MzIHEhKu";   // la clave pública: "sb_publishable_..." o la antigua "eyJ..."
+
+  /* Datos y teléfono de contacto de la agencia (cámbialos por los reales) */
+  const TEL   = "+34690608881";
+  const EMAIL = "hola@inmonieto.es";
+
+  /* ── Inmuebles de ejemplo (se usan si no hay Supabase configurado) ── */
+  const DEMO = [
+    {id:1, titulo:"Casa en El Brillante", zona:"El Brillante", tipo:"Casa", op:"venta", precio:420000, m2:180, hab:4, ban:2, foto_url:null,
+      desc:"Vivienda unifamiliar con jardín y garaje en una de las zonas más tranquilas de la ciudad. Amplios espacios, mucha luz natural y patio trasero orientado al sur."},
+    {id:2, titulo:"Piso céntrico reformado", zona:"Centro", tipo:"Piso", op:"venta", precio:185000, m2:90, hab:3, ban:2, foto_url:null,
+      desc:"A estrenar tras una reforma integral. Cocina abierta, suelos de microcemento y balcón a calle peatonal, a un paso de todo."},
+    {id:3, titulo:"Ático en Ciudad Jardín", zona:"Ciudad Jardín", tipo:"Ático", op:"alquiler", precio:1200, m2:110, hab:3, ban:2, foto_url:null,
+      desc:"Ático luminoso con terraza de 25 m² y vistas despejadas. Incluye plaza de garaje y trastero. Comunidad con piscina."},
+    {id:4, titulo:"Casa-patio en la Judería", zona:"Judería", tipo:"Casa", op:"venta", precio:560000, m2:220, hab:5, ban:3, foto_url:null,
+      desc:"Auténtica casa cordobesa con patio central empedrado, arcos de medio punto y celosías. Historia y encanto en pleno casco histórico."},
+    {id:5, titulo:"Dúplex a estrenar en Poniente", zona:"Poniente", tipo:"Dúplex", op:"venta", precio:245000, m2:120, hab:3, ban:2, foto_url:null,
+      desc:"Obra nueva de altas calidades, con aerotermia y domótica. Dos plantas, salón a doble altura y azotea comunitaria."},
+    {id:6, titulo:"Estudio junto a la Ribera", zona:"Ribera", tipo:"Estudio", op:"alquiler", precio:750, m2:45, hab:1, ban:1, foto_url:null,
+      desc:"Acogedor estudio reformado con vistas al Guadalquivir. Ideal para una persona o pareja, amueblado y listo para entrar."},
+  ];
+
+  let DATA = DEMO;
+  let filtro = "todos", q = "";
+  const eur = n => (Number(n)||0).toLocaleString("es-ES");
+  const esc = s => String(s??"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const grid = document.getElementById("grid");
+  const count = document.getElementById("count");
+
+  /* Tono estable por inmueble para el marco decorativo (cuando no hay foto) */
+  function hue(id){ let n=0; for(const c of String(id)) n=(n*31+c.charCodeAt(0))%360; return n; }
+
+  /* Convierte una fila de Supabase al modelo que usa la web */
+  function fromDB(r){
+    return { id:r.id, titulo:r.titulo||"Inmueble", zona:r.municipio||"Córdoba", tipo:r.tipo||"Vivienda",
+      op:r.operacion||"venta", precio:Number(r.precio)||0, m2:r.superficie_m2, hab:r.habitaciones,
+      ban:r.banos, desc:r.descripcion||"", foto_url:r.foto_url||null };
+  }
+
+  /* "Foto" en arco: lienzo cálido con arcada andaluza, tono por inmueble */
+  function art(id){ const h=hue(id);
+    return `<svg class="art" viewBox="0 0 400 320" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs><linearGradient id="g${h}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="hsl(${h},42%,86%)"/><stop offset="1" stop-color="hsl(${(h+22)%360},38%,72%)"/>
+      </linearGradient></defs>
+      <rect width="400" height="320" fill="url(#g${h})"/>
+      <circle cx="312" cy="86" r="34" fill="hsl(${h},60%,94%)" opacity=".8"/>
+      <g fill="none" stroke="hsl(${(h+20)%360},45%,40%)" stroke-width="3" opacity=".55">
+        <path d="M40 300V196c0-24 19-43 43-43s43 19 43 43v104"/>
+        <path d="M150 300V196c0-24 19-43 43-43s43 19 43 43v104"/>
+        <path d="M260 300V196c0-24 19-43 43-43s43 19 43 43v104"/>
+        <path d="M20 196h360"/></g>
+      <g fill="hsl(${(h+120)%360},34%,34%)" opacity=".5"><path d="M356 300c0-40 8-92 14-92s14 52 14 92z"/></g>
+    </svg>`;
+  }
+  function foto(p){ return p.foto_url
+    ? `<img src="${esc(p.foto_url)}" alt="${esc(p.titulo)}" loading="lazy">` : art(p.id); }
+  function facts(p){ const f=[];
+    if(p.m2)  f.push(`<span>◱ ${esc(p.m2)} m²</span>`);
+    if(p.hab) f.push(`<span>◧ ${esc(p.hab)} hab</span>`);
+    if(p.ban) f.push(`<span>◇ ${esc(p.ban)} baños</span>`);
+    return f.join(""); }
+  function precioHTML(p){ return p.op==="alquiler" ? `${eur(p.precio)} €<small>/mes</small>` : `${eur(p.precio)} €`; }
+
+  function card(p){
+    return `<button class="prop" data-id="${esc(p.id)}">
+      <div class="photo">
+        <span class="badge ${p.op==="alquiler"?"alquiler":"venta"}">${p.op==="alquiler"?"En alquiler":"En venta"}</span>
+        ${foto(p)}
+      </div>
+      <div class="pbody">
+        <div class="ptop">
+          <div><div class="ptitle">${esc(p.titulo)}</div><div class="pzone">${esc(p.tipo)} · ${esc(p.zona)}</div></div>
+          <div class="pprice">${precioHTML(p)}</div>
+        </div>
+        <div class="facts">${facts(p)}</div>
+      </div>
+    </button>`;
+  }
+
+  function render(){
+    const list = DATA.filter(p=>{
+      const okF = filtro==="todos" || p.op===filtro;
+      const okQ = !q || (p.titulo+" "+p.zona+" "+p.tipo).toLowerCase().includes(q);
+      return okF && okQ;
+    });
+    grid.innerHTML = list.length ? list.map(card).join("")
+      : `<div class="empty">No hay inmuebles que coincidan con tu búsqueda.</div>`;
+    count.textContent = `${list.length} ${list.length===1?"inmueble":"inmuebles"}`;
+    grid.querySelectorAll(".prop").forEach(b=>b.addEventListener("click",()=>detalle(b.dataset.id)));
+  }
+
+  function detalle(id){
+    const p = DATA.find(x=>String(x.id)===String(id)); if(!p) return;
+    const asunto = encodeURIComponent(`Interés en: ${p.titulo} (${p.zona})`);
+    document.getElementById("sheet").innerHTML = `
+      <div class="shot"><button class="close" id="close" aria-label="Cerrar">✕</button>${foto(p)}</div>
+      <div class="sheet-b">
+        <div class="sbadge">${p.op==="alquiler"?"En alquiler":"En venta"} · ${esc(p.tipo)}</div>
+        <h2>${esc(p.titulo)}</h2>
+        <div class="zone">${esc(p.zona)}, Córdoba</div>
+        <div class="sprice">${precioHTML(p).replace("<small>","<small> ")}</div>
+        <div class="sgrid">
+          <div class="stat"><div class="k">Superficie</div><div class="v">${p.m2?esc(p.m2):"—"}<span style="font-size:13px"> m²</span></div></div>
+          <div class="stat"><div class="k">Habitac.</div><div class="v">${p.hab?esc(p.hab):"—"}</div></div>
+          <div class="stat"><div class="k">Baños</div><div class="v">${p.ban?esc(p.ban):"—"}</div></div>
+          <div class="stat"><div class="k">Tipo</div><div class="v" style="font-size:16px">${esc(p.tipo)}</div></div>
+        </div>
+        ${p.desc?`<p class="sdesc">${esc(p.desc)}</p>`:""}
+        <div class="cta">
+          <a class="btn p" href="https://wa.me/${TEL.replace(/[^0-9]/g,"")}?text=${asunto}">Solicitar visita</a>
+          <a class="btn g" href="tel:${TEL}">Llamar</a>
+          <a class="btn g" href="mailto:${EMAIL}?subject=${asunto}">Escribir</a>
+        </div>
+      </div>`;
+    const ov = document.getElementById("ov");
+    ov.classList.add("show"); document.body.style.overflow="hidden";
+    document.getElementById("close").addEventListener("click", cerrar);
+  }
+  function cerrar(){ document.getElementById("ov").classList.remove("show"); document.body.style.overflow=""; }
+  document.getElementById("ov").addEventListener("click", e=>{ if(e.target.id==="ov") cerrar(); });
+  document.addEventListener("keydown", e=>{ if(e.key==="Escape") cerrar(); });
+
+  document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click", ()=>{
+    filtro = c.dataset.f;
+    document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed", x===c));
+    render();
+  }));
+  document.querySelectorAll(".hnav [data-op]").forEach(a=>a.addEventListener("click", e=>{
+    e.preventDefault(); const op=a.dataset.op;
+    filtro=op; document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed", x.dataset.f===op));
+    render(); document.getElementById("cartera").scrollIntoView({behavior:"smooth"});
+  }));
+  document.getElementById("q").addEventListener("input", e=>{ q=e.target.value.trim().toLowerCase(); render(); });
+
+  /* Tema: respeta el del sistema y permite alternar */
+  const tb = document.getElementById("theme");
+  const mm = window.matchMedia ? window.matchMedia.bind(window) : () => ({ matches:false, addEventListener(){} });
+  const prefiereOscuro = () => mm("(prefers-color-scheme:dark)").matches;
+  function setIcon(){ const dark = (document.documentElement.dataset.theme||"")==="dark"
+      || (!document.documentElement.dataset.theme && prefiereOscuro());
+    tb.textContent = dark ? "☀" : "☾"; }
+  tb.addEventListener("click", ()=>{
+    const cur = document.documentElement.dataset.theme || (prefiereOscuro() ? "dark":"light");
+    document.documentElement.dataset.theme = cur==="dark" ? "light":"dark"; setIcon();
+  });
+  mm("(prefers-color-scheme:dark)").addEventListener("change", setIcon);
+  setIcon();
+
+  /* ── Carga de datos: Supabase si está configurado; si no, ejemplos ── */
+  async function cargar(){
+    if(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase){
+      try{
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const { data, error } = await sb
+          .from("inmuebles").select("*")
+          .eq("publicado_web", true)
+          .order("publicado_en", { ascending:false, nullsFirst:false });
+        if(error) throw error;
+        DATA = (data||[]).map(fromDB);
+      }catch(e){
+        console.warn("No se pudo cargar de Supabase, se muestran ejemplos:", e.message);
+        DATA = DEMO;
+      }
+    }
+    render();
+  }
+  cargar();
+</script>
+</body>
+</html>
