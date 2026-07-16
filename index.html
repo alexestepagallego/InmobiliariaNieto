@@ -146,6 +146,18 @@
     color:var(--ink); font-family:var(--sans); font-size:15px; padding:0 13px; outline:none}
   .prow input:focus{border-color:var(--pine)}
 
+  /* Área de clientes (login + mis contratos) */
+  .hbtn{height:38px; padding:0 15px; border-radius:10px; border:1px solid var(--line-2);
+    background:transparent; color:var(--ink); font-family:var(--sans); font-size:14px; font-weight:600;
+    cursor:pointer; transition:.15s; white-space:nowrap}
+  .hbtn:hover{background:var(--paper-2)}
+  .doclist{display:flex; flex-direction:column; gap:10px}
+  .docrow{display:flex; align-items:center; gap:12px; padding:13px 14px; border:1px solid var(--line);
+    border-radius:12px; background:var(--surface)}
+  .docrow .dinfo{flex:1; min-width:0}
+  .docrow .dname{font-weight:600}
+  .docrow .dmeta{color:var(--muted); font-size:12.5px; margin-top:2px}
+
   /* Rejilla */
   .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:30px 26px; padding-bottom:70px}
   .prop{border:none; background:transparent; text-align:left; padding:0; cursor:pointer; font-family:inherit;
@@ -231,6 +243,7 @@
       <a href="#" data-op="alquiler">Alquiler</a>
       <a href="#contacto">Contacto</a>
     </nav>
+    <button class="hbtn" id="btnAcceso">Acceso clientes</button>
     <button class="tbtn" id="theme" aria-label="Cambiar tema">☾</button>
   </div>
 </header>
@@ -289,6 +302,10 @@
   <div class="sheet fsheet" id="fsheet"></div>
 </div>
 
+<div class="ov" id="aov" role="dialog" aria-modal="true" aria-label="Área de clientes">
+  <div class="sheet fsheet" id="asheet"></div>
+</div>
+
 <script>
   /* ════════════════════════════════════════════════════════════════════
      CONFIGURACIÓN — pega aquí tus 2 valores de Supabase (los MISMOS del
@@ -300,6 +317,11 @@
   /* Datos y teléfono de contacto de la agencia (cámbialos por los reales) */
   const TEL   = "+34690608881";
   const EMAIL = "hola@inmonieto.es";
+
+  /* Cliente Supabase compartido: datos públicos (inmuebles) y acceso de clientes */
+  const SB = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
 
   /* ── Inmuebles de ejemplo (se usan si no hay Supabase configurado) ── */
   const DEMO = [
@@ -546,10 +568,9 @@
 
   /* ── Carga de datos: Supabase si está configurado; si no, ejemplos ── */
   async function cargar(){
-    if(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase){
+    if(SB){
       try{
-        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        const { data, error } = await sb
+        const { data, error } = await SB
           .from("inmuebles").select("*")
           .eq("publicado_web", true)
           .order("publicado_en", { ascending:false, nullsFirst:false });
@@ -562,7 +583,146 @@
     }
     render();
   }
+
+  /* ═══════════════ ÁREA DE CLIENTES (login + Mis contratos) ═══════════════ */
+  const aov = document.getElementById("aov");
+  const btnAcceso = document.getElementById("btnAcceso");
+  const TIPO_DOC = { confidencialidad:"Compromiso de confidencialidad", hoja_encargo:"Hoja de encargo", arras:"Contrato de arras", alquiler:"Contrato de alquiler", otro:"Documento" };
+  const estadoTxt = e => ({ borrador:"Borrador", enviado:"Enviado", firmado:"Firmado", archivado:"Archivado" })[e] || e;
+
+  function abrirAuth(){ aov.classList.add("show"); document.body.style.overflow="hidden"; }
+  function cerrarAuth(){ aov.classList.remove("show"); document.body.style.overflow=""; }
+  aov.addEventListener("click", e=>{ if(e.target.id==="aov") cerrarAuth(); });
+  document.addEventListener("keydown", e=>{ if(e.key==="Escape") cerrarAuth(); });
+
+  async function estadoSesion(){
+    if(!SB){ if(btnAcceso) btnAcceso.style.display="none"; return null; }
+    const { data } = await SB.auth.getSession();
+    const user = (data.session && data.session.user) || null;
+    btnAcceso.textContent = user ? "Mis contratos" : "Acceso clientes";
+    return user;
+  }
+
+  if(btnAcceso) btnAcceso.addEventListener("click", async ()=>{
+    const user = await estadoSesion();
+    if(user) pantallaContratos(user); else pantallaLogin();
+    abrirAuth();
+  });
+
+  function pantallaLogin(aviso){
+    document.getElementById("asheet").innerHTML = `
+      <div class="fsheet-h"><h3>Acceso de clientes</h3><button class="xbtn" id="aClose" aria-label="Cerrar">✕</button></div>
+      <div class="fsheet-b">
+        <p style="color:var(--muted);margin:6px 0 16px">Introduce el email y la contraseña que te facilitó la agencia.</p>
+        <div class="prow" style="flex-direction:column;gap:14px">
+          <div class="fin"><label>Email</label><input id="aEmail" type="email" autocomplete="email" placeholder="tucorreo@email.com"></div>
+          <div class="fin"><label>Contraseña</label><input id="aPass" type="password" autocomplete="current-password" placeholder="Tu contraseña"></div>
+        </div>
+        ${aviso?`<p style="color:var(--pine-d);font-size:13.5px;margin:13px 0 0">${aviso}</p>`:""}
+        <p style="margin:14px 0 0"><a href="#" id="aReset" style="color:var(--pine);font-size:13.5px">¿Olvidaste la contraseña?</a></p>
+      </div>
+      <div class="fsheet-f"><span></span><button class="btn p" id="aLogin">Entrar</button></div>`;
+    document.getElementById("aClose").addEventListener("click", cerrarAuth);
+    const entrar = async ()=>{
+      const email=document.getElementById("aEmail").value.trim();
+      const pass=document.getElementById("aPass").value;
+      if(!email || !pass){ pantallaLogin("Escribe tu email y tu contraseña."); return; }
+      const btn=document.getElementById("aLogin"); btn.disabled=true; btn.textContent="Entrando…";
+      const { data, error } = await SB.auth.signInWithPassword({ email, password:pass });
+      if(error){ pantallaLogin("Email o contraseña incorrectos."); return; }
+      await estadoSesion();
+      const user = data.user;
+      if(user && user.user_metadata && user.user_metadata.must_change_password) pantallaCambioPass(user);
+      else pantallaContratos(user);
+    };
+    document.getElementById("aLogin").addEventListener("click", entrar);
+    document.getElementById("aPass").addEventListener("keydown", e=>{ if(e.key==="Enter") entrar(); });
+    document.getElementById("aReset").addEventListener("click", async e=>{
+      e.preventDefault();
+      const email=document.getElementById("aEmail").value.trim();
+      if(!email){ pantallaLogin("Escribe tu email arriba y vuelve a pulsar para recibir el enlace."); return; }
+      await SB.auth.resetPasswordForEmail(email, { redirectTo: location.href });
+      pantallaLogin("Te hemos enviado un email para restablecer la contraseña (mira también spam).");
+    });
+  }
+
+  function pantallaCambioPass(user){
+    document.getElementById("asheet").innerHTML = `
+      <div class="fsheet-h"><h3>Crea tu contraseña</h3></div>
+      <div class="fsheet-b">
+        <p style="color:var(--muted);margin:6px 0 16px">Por seguridad, sustituye la contraseña temporal por una tuya.</p>
+        <div class="prow" style="flex-direction:column;gap:14px">
+          <div class="fin"><label>Nueva contraseña</label><input id="np1" type="password" autocomplete="new-password"></div>
+          <div class="fin"><label>Repítela</label><input id="np2" type="password" autocomplete="new-password"></div>
+        </div>
+        <p id="npErr" style="color:var(--pine-d);font-size:13.5px;margin:12px 0 0"></p>
+      </div>
+      <div class="fsheet-f"><span></span><button class="btn p" id="npSave">Guardar y entrar</button></div>`;
+    document.getElementById("npSave").addEventListener("click", async ()=>{
+      const a=document.getElementById("np1").value, b=document.getElementById("np2").value;
+      const err=document.getElementById("npErr");
+      if(a.length<6){ err.textContent="Mínimo 6 caracteres."; return; }
+      if(a!==b){ err.textContent="Las contraseñas no coinciden."; return; }
+      const btn=document.getElementById("npSave"); btn.disabled=true; btn.textContent="Guardando…";
+      const { error } = await SB.auth.updateUser({ password:a, data:{ must_change_password:false } });
+      if(error){ err.textContent="No se pudo guardar: "+error.message; btn.disabled=false; btn.textContent="Guardar y entrar"; return; }
+      pantallaContratos(user);
+    });
+  }
+
+  async function pantallaContratos(user){
+    document.getElementById("asheet").innerHTML = `
+      <div class="fsheet-h"><h3>Mis contratos</h3><button class="xbtn" id="aClose" aria-label="Cerrar">✕</button></div>
+      <div class="fsheet-b"><div id="misDocs" style="padding:6px 0;color:var(--muted)">Cargando…</div></div>
+      <div class="fsheet-f"><button class="flink" id="aSalir">Cerrar sesión</button><button class="btn p" id="aHecho">Hecho</button></div>`;
+    document.getElementById("aClose").addEventListener("click", cerrarAuth);
+    document.getElementById("aHecho").addEventListener("click", cerrarAuth);
+    document.getElementById("aSalir").addEventListener("click", async ()=>{ await SB.auth.signOut(); await estadoSesion(); pantallaLogin("Has cerrado sesión."); });
+
+    const cont=document.getElementById("misDocs");
+    const { data, error } = await SB.from("documentos").select("*").order("creado_en",{ascending:false});
+    if(error){ cont.innerHTML=`<p style="color:var(--muted)">No se pudieron cargar tus documentos ahora mismo.</p>`; return; }
+    if(!data || !data.length){ cont.innerHTML=`<p style="color:var(--muted)">Todavía no tienes documentos. Cuando la agencia prepare tus contratos, aparecerán aquí.</p>`; return; }
+    cont.innerHTML = `<div class="doclist">`+data.map(d=>`
+      <div class="docrow">
+        <div class="dinfo"><div class="dname">${esc(d.nombre)}</div>
+          <div class="dmeta">${esc(TIPO_DOC[d.tipo]||"Documento")} · ${esc(estadoTxt(d.estado))}</div></div>
+        <button class="btn g" data-doc="${esc(d.id)}">${d.contenido_html?"Ver":"Descargar"}</button>
+      </div>`).join("")+`</div>`;
+    cont.querySelectorAll("[data-doc]").forEach(b=>b.addEventListener("click",()=>abrirDoc(data.find(x=>String(x.id)===b.dataset.doc))));
+  }
+
+  async function abrirDoc(d){
+    if(!d) return;
+    if(d.contenido_html){
+      const doc = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(d.nombre)}</title>
+        <style>:root{--muted:#6e7b72;--serif:Georgia,"Times New Roman",serif}
+        body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:720px;margin:32px auto;padding:0 22px;color:#1c2620;line-height:1.55}
+        h4{font-family:var(--serif);font-size:23px;margin:0 0 4px}
+        .inv-top,.inv-parties{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+        .inv-parties{margin:16px 0;border:1px solid #e7e1d6;border-radius:10px;padding:16px}
+        .p{flex:1;min-width:180px}.t{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6e7b72;margin-bottom:4px}
+        .ref{font-family:ui-monospace,monospace;color:#6e7b72}.strong{font-weight:600}
+        @media print{body{margin:0}}</style></head><body>${d.contenido_html}
+        <p style="margin-top:28px" class="noprint"><button onclick="window.print()" style="padding:10px 18px;border:1px solid #c25c86;background:#c25c86;color:#fff;border-radius:8px;cursor:pointer;font-size:14px">Imprimir / Guardar PDF</button></p>
+        </body></html>`;
+      const w=window.open("","_blank");
+      if(w){ w.document.open(); w.document.write(doc); w.document.close(); }
+      return;
+    }
+    if(d.storage_key){
+      const { data, error } = await SB.storage.from("documentos").createSignedUrl(d.storage_key, 120);
+      if(!error && data && data.signedUrl) window.open(data.signedUrl,"_blank");
+    }
+  }
+
+  // Al volver desde el email de "restablecer contraseña", pedir una nueva.
+  if(SB && SB.auth.onAuthStateChange) SB.auth.onAuthStateChange((event, sess)=>{
+    if(event==="PASSWORD_RECOVERY"){ abrirAuth(); pantallaCambioPass(sess && sess.user); }
+  });
+
   cargar();
+  estadoSesion();
 </script>
 
 
